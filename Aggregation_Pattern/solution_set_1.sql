@@ -121,7 +121,7 @@ select
 	product_id
 from orders
 	group by product_id
-    order by sum(product_id) desc
+    order by sum(quantity) desc
     limit 1;
 -- Categories whose average product price is greater than 500
 select
