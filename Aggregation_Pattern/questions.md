@@ -22,3 +22,5 @@ Find users who placed more than 1 order.
 Find countries with more than 2 users.
 Find the product with the highest total quantity sold.
 Find categories whose average product price is greater than 500.
+
+SET 2
