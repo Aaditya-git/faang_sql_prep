@@ -115,5 +115,23 @@ SELECT * FROM FILTRD;
 -- c) HARD – FAANG LEVELLED
 
 -- Find users whose total spending is greater than the average spending of all users.
+WITH SUM_PER_USER AS (
+    SELECT 
+        O.USER_ID,
+        SUM(P.PRICE * O.QUANTITY) AS TOTAL_PRICE
+    FROM PRODUCTS P 
+    JOIN ORDERS O 
+    ON P.PRODUCT_ID = O.PRODUCT_ID
+    GROUP BY O.USER_ID
+),
+AVG_TABLE AS (
+    SELECT *,
+           AVG(TOTAL_PRICE) OVER () AS AVG_TOTAL
+    FROM SUM_PER_USER
+)
+SELECT *
+FROM AVG_TABLE
+WHERE TOTAL_PRICE > AVG_TOTAL;
+
 -- Find the product that generated the highest revenue.
 -- Find users who ordered at least one product from every category.
