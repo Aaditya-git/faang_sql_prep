@@ -1,0 +1,32 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# MySQL / SQL Workbench temp files
+*.log
+*.tmp
+*.bak
+
+# Environment files
+.env
+
+# Python (in case you add later)
+__pycache__/
+*.pyc
+
+# Node (if ever used)
+node_modules/
+
+# Mac system files
+.AppleDouble
+.LSOverride
+
+# Windows system files
+ehthumbs.db
+Desktop.ini
