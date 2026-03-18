@@ -48,3 +48,29 @@ c) HARD – FAANG LEVELLED
 12. Find the product that generated the highest revenue.
 13. Find users who ordered at least one product from every category.
 
+
+SET 3 
+
+a) Basic
+
+1. Find the total number of distinct users who placed orders.
+2. Find the total number of distinct categories ordered.
+
+b) Medium
+
+3. Find the user who spent the most money in a single day.
+4. Find the average revenue per order for each category.
+5. Find the top 2 users by total spending.
+6. Find the number of users who have never placed an order.
+7. Find the category with the lowest total revenue.
+8. Find the users whose average order value is greater than 500.
+9. Find the percentage contribution of each category to total revenue.
+
+c) HARD – FAANG LEVELLED
+
+10. Find the users whose total spending is in the top 20% of all users.
+11. Find the category whose revenue increased the most between any two consecutive days.
+12. Find the users who contributed to more than 30% of total revenue individually.
+13. Find the day with the highest revenue growth compared to the previous day.
+
+
