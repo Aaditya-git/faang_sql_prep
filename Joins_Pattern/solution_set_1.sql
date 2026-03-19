@@ -58,8 +58,65 @@ FROM
         AND O.ORDER_STATUS = 'completed'
         GROUP BY P.CATEGORY;
 -- 7. Find all users who have placed at least one order containing a product in the Books category.
+	SELECT 
+		DISTINCT U.USER_ID,
+        U.USER_NAME
+	FROM 
+		USERS U JOIN ORDERS O ON
+        U.USER_ID = O.USER_ID JOIN
+		ORDER_ITEMS OI ON 
+		O.ORDER_ID = OI.ORDER_ID JOIN PRODUCTS P ON
+        P.PRODUCT_ID = OI.PRODUCT_ID 
+	WHERE P.CATEGORY IN ('Books');
+		
 -- 8. Find the total amount spent by each user on completed orders only.
+SELECT
+	U.USER_ID,
+    SUM(P.PRICE * OI.QUANTITY) AS AMT_SPENT
+FROM
+	USERS U 
+    JOIN ORDERS O ON
+		U.USER_ID = O.USER_ID
+    JOIN ORDER_ITEMS OI ON
+		O.ORDER_ID = OI.ORDER_ID
+	JOIN PRODUCTS P ON
+		P.PRODUCT_ID = OI.PRODUCT_ID
+	WHERE O.ORDER_STATUS = 'completed'
+    GROUP BY U.USER_ID;
 -- 9. Find the sellers whose products were ordered by users from at least two different cities, considering completed orders only.
-
+	SELECT
+		S.SELLER_ID,
+        COUNT(DISTINCT U.CITY) AS CT
+	FROM 
+		SELLERS S 
+        JOIN PRODUCTS P ON
+			S.SELLER_ID = P.SELLER_ID
+		JOIN ORDER_ITEMS OI ON
+			OI.PRODUCT_ID = P.PRODUCT_ID
+		JOIN ORDERS O ON
+			O.ORDER_ID = OI.ORDER_ID
+		JOIN USERS U ON
+			U.USER_ID = O.USER_ID
+	WHERE
+		O.ORDER_STATUS = 'completed'
+        GROUP BY S.SELLER_ID
+        HAVING COUNT(DISTINCT U.CITY) >1;
+			
 -- c) HARD - FAANG LEVELLED
 -- 10. Find the user who has purchased from the highest number of distinct sellers, considering completed orders only.
+SELECT 
+	U.USER_ID,
+    COUNT(DISTINCT P.SELLER_ID) AS DIST_PRD_CT
+FROM
+	USERS U 
+    JOIN ORDERS O ON
+		U.USER_ID = O.USER_ID
+	JOIN ORDER_ITEMS OI ON
+		O.ORDER_ID = OI.ORDER_ID
+	JOIN PRODUCTS P ON
+		P.PRODUCT_ID = OI.PRODUCT_ID
+WHERE
+	O.ORDER_STATUS = 'completed'
+	GROUP BY U.USER_ID
+    ORDER BY DIST_PRD_CT DESC
+    LIMIT 1;
