@@ -114,3 +114,84 @@ INSERT INTO order_items (order_item_id, order_id, product_id, quantity) VALUES
 (20, 5011, 1008, 1),
 (21, 5012, 1010, 2),
 (22, 5012, 1007, 1);
+
+
+
+
+-- --------------------------------------------------------------------
+DROP TABLE IF EXISTS shipment_events;
+DROP TABLE IF EXISTS shipments;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS sellers;
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users (
+    user_id INT PRIMARY KEY,
+    user_name VARCHAR(50),
+    city VARCHAR(50),
+    signup_date DATE
+);
+
+CREATE TABLE sellers (
+    seller_id INT PRIMARY KEY,
+    seller_name VARCHAR(50),
+    seller_city VARCHAR(50),
+    rating DECIMAL(2,1)
+);
+
+CREATE TABLE products (
+    product_id INT PRIMARY KEY,
+    product_name VARCHAR(100),
+    category VARCHAR(50),
+    price DECIMAL(10,2),
+    seller_id INT,
+    FOREIGN KEY (seller_id) REFERENCES sellers(seller_id)
+);
+
+CREATE TABLE orders (
+    order_id INT PRIMARY KEY,
+    user_id INT,
+    order_date DATE,
+    order_status VARCHAR(20),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE order_items (
+    order_item_id INT PRIMARY KEY,
+    order_id INT,
+    product_id INT,
+    quantity INT,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+CREATE TABLE payments (
+    payment_id INT PRIMARY KEY,
+    order_id INT,
+    payment_date DATE,
+    amount DECIMAL(10,2),
+    payment_status VARCHAR(20),
+    payment_method VARCHAR(20),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+);
+
+CREATE TABLE shipments (
+    shipment_id INT PRIMARY KEY,
+    order_id INT,
+    shipment_date DATE,
+    carrier VARCHAR(30),
+    delivery_status VARCHAR(20),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+);
+
+CREATE TABLE shipment_events (
+    event_id INT PRIMARY KEY,
+    shipment_id INT,
+    event_time DATETIME,
+    event_type VARCHAR(30),
+    hub_city VARCHAR(50),
+    FOREIGN KEY (shipment_id) REFERENCES shipments(shipment_id)
+);
