@@ -1,3 +1,4 @@
+-- TABLES INVOLVED
 -- users 
 -- sellers 
 -- products 
@@ -41,15 +42,60 @@ FROM
         
 -- b) Medium
 -- 4. Find each user and the number of completed orders they placed, including users with zero completed orders.
+SELECT
+	U.USER_ID,
+    COUNT(O.ORDER_ID) AS CNT_OF_CMPLTD_ORDS
+FROM 
+	USERS U
+	JOIN ORDERS O ON
+		U.USER_ID = O.USER_ID
+	WHERE LOWER(O.ORDER_STATUS) = LOWER('COMPLETED')
+    GROUP BY U.USER_ID;
 -- 5. Find each seller and the total quantity of items sold across completed orders only.
+SELECT
+	S.SELLER_ID,
+    COUNT(O.ORDER_ID) AS CT_CMPLTD_ORDS
+FROM
+	SELLERS S 
+	JOIN PRODUCTS P ON
+		S.SELLER_ID = P.SELLER_ID
+	JOIN ORDER_ITEMS OI ON 
+		P.PRODUCT_ID = OI.PRODUCT_ID
+	JOIN ORDERS O ON
+		OI.ORDER_ID = O.ORDER_ID
+	WHERE O.ORDER_STATUS = 'completed'
+	GROUP BY S.SELLER_ID;
 -- 6. Find all orders that have a payment record but no shipment record.
+ -- WHAT DO YOU MEAN BY PAYMENT RECORD?
+ 
 -- 7. Find all users who placed at least one completed order that contained products from more than one category.
+SELECT DISTINCT
+    U.USER_ID,
+    U.USER_NAME
+FROM USERS U
+JOIN ORDERS O
+    ON U.USER_ID = O.USER_ID
+JOIN ORDER_ITEMS OI
+    ON O.ORDER_ID = OI.ORDER_ID
+JOIN PRODUCTS P
+    ON OI.PRODUCT_ID = P.PRODUCT_ID
+WHERE O.ORDER_STATUS = 'completed'
+GROUP BY U.USER_ID, U.USER_NAME, O.ORDER_ID
+HAVING COUNT(DISTINCT P.CATEGORY) > 1;
 -- 8. Find each city and the total revenue from paid payments only, where city is the user city.
 -- 9. Find the sellers whose products appear in at least one paid order from users in a different city than the seller city.
 -- 10. Find each payment method and the total number of distinct users who successfully paid with that method.
 
 -- c) HARD - FAANG LEVELLED
 -- 11. Find the users whose completed orders were fulfilled by at least two different carriers.
+SELECT
+    O.USER_ID
+FROM ORDERS O
+JOIN SHIPMENTS S
+    ON S.ORDER_ID = O.ORDER_ID
+WHERE O.ORDER_STATUS = 'completed'
+GROUP BY O.USER_ID
+HAVING COUNT(DISTINCT S.CARRIER) >= 2;
 -- 12. Find the seller whose products generated the highest paid revenue, considering only orders with payment_status = 'paid'.
 -- 13. Find all orders where every item in the order came from the same seller, considering completed orders only.
 -- 14. Find the users who have bought from every seller that sells products in the Books or Kitchen categories, considering completed and paid orders only.
