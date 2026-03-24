@@ -97,6 +97,8 @@ WHERE O.ORDER_STATUS = 'completed'
 GROUP BY O.USER_ID
 HAVING COUNT(DISTINCT S.CARRIER) >= 2;
 -- 12. Find the seller whose products generated the highest paid revenue, considering only orders with payment_status = 'paid'.
+
+	
 -- 13. Find all orders where every item in the order came from the same seller, considering completed orders only.
 -- 14. Find the users who have bought from every seller that sells products in the Books or Kitchen categories, considering completed and paid orders only.
 -- 15. Find the carrier with the highest average paid order value across shipped orders.
