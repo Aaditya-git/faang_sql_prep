@@ -201,3 +201,56 @@ SELECT
     ROUND(100.0 * STEP3_USERS / STEP2_USERS, 2) AS CART_TO_PURCHASE_PCT,
     ROUND(100.0 * STEP3_USERS / STEP1_USERS, 2) AS FULL_FUNNEL_PCT
 FROM COUNTS;
+
+
+
+
+-- 8.Count how many users completed the full funnel within 30 minutes of their first view_product.
+WITH VP_TABLE AS (
+SELECT 
+	USER_ID,
+    MIN(EVENT_TIME) AS MIN_VP
+FROM
+	EVENTS
+WHERE EVENT_NAME = 'view_product'
+GROUP BY USER_ID
+),
+AC_TABLE AS (
+SELECT
+	VP.USER_ID,
+    VP.MIN_VP,
+    MIN(E.EVENT_TIME) AS MIN_AC
+FROM
+	VP_TABLE VP 
+	JOIN EVENTS E ON
+		VP.USER_ID = E.USER_ID
+		AND E.EVENT_NAME = 'add_to_cart'
+		AND E.EVENT_TIME > VP.MIN_VP
+GROUP BY VP.USER_ID, VP.MIN_VP
+),
+P_TABLE AS (
+SELECT
+	AC.USER_ID,
+    AC.MIN_VP,
+    AC.MIN_AC,
+    MIN(EV.EVENT_TIME) AS MIN_P
+FROM
+	AC_TABLE AC 
+	JOIN EVENTS EV ON
+		AC.USER_ID = EV.USER_ID
+		AND EV.EVENT_NAME = 'purchase'
+		AND EV.EVENT_TIME > AC.MIN_AC
+GROUP BY AC.USER_ID, AC.MIN_VP, AC.MIN_AC
+)
+SELECT 
+	COUNT(*) AS FULL_FUNNEL_WITHIN_30_MIN
+FROM P_TABLE
+WHERE TIMESTAMPDIFF(MINUTE, MIN_VP, MIN_P) <= 30;
+-- Count how many users completed the funnel where each step 
+-- happens within 15 minutes of the previous step.
+
+
+-- For each signup date, calculate:
+-- number of users who viewed product
+-- number who added to cart after viewing
+-- number who purchased after adding
