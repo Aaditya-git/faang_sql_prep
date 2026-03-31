@@ -246,11 +246,156 @@ WHERE
 -- 8. Assign session_ids where a new session starts if:
 -- time gap > 30 minutes OR
 -- device changes
+WITH base AS (
+    SELECT
+        event_id,
+        user_id,
+        event_time,
+        event_type,
+        device,
+        LAG(event_time) OVER (
+            PARTITION BY user_id
+            ORDER BY event_time
+        ) AS prev_time,
+        LAG(device) OVER (
+            PARTITION BY user_id
+            ORDER BY event_time
+        ) AS prev_device
+    FROM events
+),
+flagged AS (
+    SELECT
+        event_id,
+        user_id,
+        event_time,
+        event_type,
+        device,
+        CASE
+            WHEN prev_time IS NULL THEN 1
+            WHEN TIMESTAMPDIFF(MINUTE, prev_time, event_time) > 30 THEN 1
+            WHEN prev_device <> device THEN 1
+            ELSE 0
+        END AS new_session_flag
+    FROM base
+)
+SELECT
+    event_id,
+    user_id,
+    event_time,
+    event_type,
+    device,
+    SUM(new_session_flag) OVER (
+        PARTITION BY user_id
+        ORDER BY event_time
+        ROWS UNBOUNDED PRECEDING
+    ) AS session_id
+FROM flagged
+ORDER BY user_id, event_time;
 
 -- 9. For each user, find the session with the maximum number of events, and return:
 -- user_id
 -- session_id
 -- event_count
+WITH base AS (
+    SELECT
+        event_id,
+        user_id,
+        event_time,
+        LAG(event_time) OVER (
+            PARTITION BY user_id
+            ORDER BY event_time
+        ) AS prev_time
+    FROM events
+),
+flagged AS (
+    SELECT
+        event_id,
+        user_id,
+        event_time,
+        CASE
+            WHEN prev_time IS NULL THEN 1
+            WHEN TIMESTAMPDIFF(MINUTE, prev_time, event_time) > 30 THEN 1
+            ELSE 0
+        END AS new_session_flag
+    FROM base
+),
+sessionized AS (
+    SELECT
+        event_id,
+        user_id,
+        event_time,
+        SUM(new_session_flag) OVER (
+            PARTITION BY user_id
+            ORDER BY event_time
+            ROWS UNBOUNDED PRECEDING
+        ) AS session_id
+    FROM flagged
+),
+session_counts AS (
+    SELECT
+        user_id,
+        session_id,
+        COUNT(*) AS event_count
+    FROM sessionized
+    GROUP BY user_id, session_id
+),
+ranked AS (
+    SELECT
+        user_id,
+        session_id,
+        event_count,
+        DENSE_RANK() OVER (
+            PARTITION BY user_id
+            ORDER BY event_count DESC
+        ) AS rn
+    FROM session_counts
+)
+SELECT
+    user_id,
+    session_id,
+    event_count
+FROM ranked
+WHERE rn = 1
+ORDER BY user_id, session_id;
+	
+
 
 -- 10. Find users who had more than 1 session in a single day, using the 30-minute rule.
+WITH PREV_TIME_TBL AS (
+	SELECT
+		USER_ID,
+		EVENT_TIME,
+		LAG(EVENT_TIME) OVER(PARTITION BY USER_ID ORDER BY EVENT_TIME) AS PREV_TIME
+	FROM 
+		EVENTS
+    ),
+TIME_DIFF_TABLE AS (
+	SELECT 
+		USER_ID,
+		EVENT_TIME,
+		CASE 
+			WHEN PREV_TIME IS NULL THEN 1
+			WHEN TIMESTAMPDIFF(MINUTE, PREV_TIME,EVENT_TIME)>30 THEN 1
+			ELSE 0
+		END AS SESSION_FLAG
+	FROM
+		PREV_TIME_TBL
+    ),
+SESSION_ID_FRMTN AS (
+	SELECT 
+		USER_ID,
+		EVENT_TIME,
+		SUM(SESSION_FLAG) OVER(PARTITION BY USER_ID ORDER BY EVENT_TIME) AS SESSION_ID
+	FROM
+		TIME_DIFF_TABLE
+    )
+SELECT 
+	user_id,
+    DATE(event_time),
+    COUNT(DISTINCT session_id)
+FROM 
+	SESSION_ID_FRMTN
+    group by date(event_time),user_id;
+	
+    
 
