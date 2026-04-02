@@ -567,3 +567,7 @@ FROM session_assignments
 GROUP BY 
     user_id, 
     session_no;
+
+-- ------------------------------------------------------------------ --------------------------------- 
+   
+select * from stream_logs;
