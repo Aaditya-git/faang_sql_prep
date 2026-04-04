@@ -569,5 +569,166 @@ GROUP BY
     session_no;
 
 -- ------------------------------------------------------------------ --------------------------------- 
-   
-select * from stream_logs;
+--   Define sessions based on a 30-minute inactivity gap.
+
+-- BUT, if a session’s cumulative duration exceeds 240 minutes, force a new session ID to start at that event.
+
+-- Report: user_id, session_id, original_start, forced_split_flag (1 if the session was split due to the 4-hour rule).
+WITH PREV_TABLE AS (
+	SELECT
+		USER_ID,
+        EVENT_TIMESTAMP,
+		LAG(EVENT_TIMESTAMP) OVER(PARTITION BY USER_ID ORDER BY EVENT_TIMESTAMP) AS PREV_TIME
+	FROM
+		STREAM_LOGS
+    ),
+    TIME_DIFF AS (
+		SELECT 
+			USER_ID,
+            EVENT_TIMESTAMP,
+            PREV_TIME,
+            CASE
+				WHEN PREV_TIME IS NULL THEN 1
+                WHEN TIMESTAMPDIFF(MINUTE,PREV_TIME,EVENT_TIMESTAMP) > 30 THEN 1
+                WHEN SUM(MINUTE(EVENT_TIMESTAMP)) OVER(PARTITION BY USER_ID ORDER BY EVENT_TIMESTAMP)>240 THEN 1
+                ELSE 0
+			END AS SESSION_FLAG
+		FROM 
+			PREV_TABLE
+    ),
+    SESSION_TABLE AS (
+    SELECT 
+		USER_ID,
+		EVENT_TIMESTAMP,
+		PREV_TIME,
+        SUM(SESSION_FLAG) OVER(PARTITION BY USER_ID ORDER BY EVENT_TIMESTAMP) AS SESSION_ID
+	FROM 
+		TIME_DIFF
+    ) SELECT 
+			* 
+	FROM SESSION_TABLE;
+    
+  WITH base AS (
+    SELECT
+        event_id,
+        user_id,
+        event_timestamp,
+        LAG(event_timestamp) OVER (
+            PARTITION BY user_id
+            ORDER BY event_timestamp
+        ) AS prev_ts
+    FROM stream_logs
+),
+gap_flagged AS (
+    SELECT
+        event_id,
+        user_id,
+        event_timestamp,
+        CASE
+            WHEN prev_ts IS NULL THEN 1
+            WHEN TIMESTAMPDIFF(MINUTE, prev_ts, event_timestamp) > 30 THEN 1
+            ELSE 0
+        END AS new_gap_session_flag
+    FROM base
+),
+gap_sessions AS (
+    SELECT
+        event_id,
+        user_id,
+        event_timestamp,
+        SUM(new_gap_session_flag) OVER (
+            PARTITION BY user_id
+            ORDER BY event_timestamp
+            ROWS UNBOUNDED PRECEDING
+        ) AS gap_session_id
+    FROM gap_flagged
+),
+with_original_start AS (
+    SELECT
+        event_id,
+        user_id,
+        event_timestamp,
+        gap_session_id,
+        MIN(event_timestamp) OVER (
+            PARTITION BY user_id, gap_session_id
+        ) AS original_start
+    FROM gap_sessions
+),
+forced_split_calc AS (
+    SELECT
+        event_id,
+        user_id,
+        event_timestamp,
+        gap_session_id,
+        original_start,
+        FLOOR(
+            TIMESTAMPDIFF(MINUTE, original_start, event_timestamp) / 240
+        ) AS forced_bucket
+    FROM with_original_start
+),
+final_labeled AS (
+    SELECT
+        event_id,
+        user_id,
+        event_timestamp,
+        original_start,
+        CASE
+            WHEN forced_bucket > 0 THEN 1
+            ELSE 0
+        END AS forced_split_flag,
+        CONCAT(gap_session_id, '_', forced_bucket) AS session_id
+    FROM forced_split_calc
+)
+SELECT
+    user_id,
+    session_id,
+    original_start,
+    forced_split_flag
+FROM final_labeled
+ORDER BY user_id, event_timestamp;
+
+-- The Challenge:
+
+-- For each store, find the Top 2 products with the highest total revenue (Price * Quantity).
+
+-- Tie-breaking Rule: If two products have the exact same revenue, 
+-- rank the one with the higher total quantity sold first.
+
+-- The Twist: You must return the results even for stores that have only one product sold, 
+-- but you must exclude any product that has a "Returned" status 
+-- in more than 20% of its total orders for that store.
+
+select * from  product_sales;
+WITH product_metrics AS (
+    -- Step 1: Calculate metrics per store/product
+    SELECT 
+        store_id,
+        product_name,
+        SUM(CASE WHEN status = 'Sold' THEN quantity * unit_price ELSE 0 END) AS total_revenue,
+        SUM(CASE WHEN status = 'Sold' THEN quantity ELSE 0 END) AS total_quantity,
+        -- Calculate return rate: (Count of Returned / Total Count of records)
+        COUNT(CASE WHEN status = 'Returned' THEN 1 END) * 1.0 / COUNT(*) AS return_rate
+    FROM product_sales
+    GROUP BY store_id, product_name
+),
+ranked_products AS (
+    -- Step 2: Filter out high-return products and rank
+    SELECT 
+        store_id,
+        product_name,
+        total_revenue,
+        total_quantity,
+        RANK() OVER(
+            PARTITION BY store_id 
+            ORDER BY total_revenue DESC, total_quantity DESC
+        ) AS rnk
+    FROM product_metrics
+    WHERE return_rate <= 0.20
+)
+SELECT 
+    store_id,
+    product_name,
+    total_revenue,
+    rnk
+FROM ranked_products
+WHERE rnk <= 2;
