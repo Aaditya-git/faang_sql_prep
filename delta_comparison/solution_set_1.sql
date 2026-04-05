@@ -224,13 +224,42 @@ WITH PREV_TABLE AS(
             MAX(CT) AS MAX_STREAK_LEN
 		FROM
 			STREAK
-            GROUP BY USER_ID
+            GROUP BY USER_ID;
         
-
-
 
 -- For each user, calculate the difference between 
 -- current order amount and the average of all their previous orders.
+WITH PREV_AMT_TBL AS(
+SELECT 
+	ORDER_ID,
+    USER_ID,
+    ORDER_TIME,
+    AMOUNT
+FROM
+	ORDERS
+)
+SELECT
+	*,
+    AMOUNT - AVG(AMOUNT) OVER(
+		PARTITION BY USER_ID 
+		ORDER BY ORDER_TIME
+		ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+    ) AS AVG_AMT_DIFF
+FROM
+	PREV_AMT_TBL;
+	
+--     
+-- c) HARD - FAANG LEVELLED
+-- For each stock, find the maximum profit achievable using exactly one buy and one sell, 
+-- where buy happens before sell.
 
 
+-- Identify users whose order amounts alternate strictly 
+-- (increase, decrease, increase, decrease...) across their entire sequence.
 
+
+-- For each user, compute the maximum cumulative increase in steps over any consecutive increasing sequence.
+
+
+-- Find users whose latest order amount is at least 50% higher than their first order amount, 
+-- AND there was at least one drop in between.
