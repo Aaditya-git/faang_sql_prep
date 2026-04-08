@@ -1,0 +1,52 @@
+select * from user_activity;
+-- For each user, group consecutive activity dates into streaks (islands).
+WITH DAY_OF AS (
+SELECT
+	USER_ID,
+    ACTIVITY_DATE,
+    DAY(ACTIVITY_DATE) -  ROW_NUMBER() OVER(PARTITION BY USER_ID ORDER BY ACTIVITY_DATE ) AS DAY_OF_ACTIVITY
+FROM
+	user_activity
+)
+SELECT 
+	USER_ID,
+    MIN(ACTIVITY_DATE) AS START_DATE,
+    MAX(ACTIVITY_DATE) AS END_DATE,
+    COUNT(*) AS STREAK_LENGTH
+FROM
+	DAY_OF
+    GROUP BY USER_ID,DAY_OF_ACTIVITY;
+    
+    
+    
+-- Problem 2: Longest Streak per User
+-- For each user, find:
+-- the longest consecutive activity streak length
+
+
+WITH DAY_OF AS (
+SELECT
+	USER_ID,
+    ACTIVITY_DATE,
+    DAY(ACTIVITY_DATE) -  ROW_NUMBER() OVER(PARTITION BY USER_ID ORDER BY ACTIVITY_DATE ) AS DAY_OF_ACTIVITY
+FROM
+	user_activity
+),
+FILTERED AS (
+SELECT 
+	USER_ID,
+    MIN(ACTIVITY_DATE) AS START_DATE,
+    MAX(ACTIVITY_DATE) AS END_DATE,
+    COUNT(*) AS STREAK_LENGTH
+FROM
+	DAY_OF
+    GROUP BY USER_ID,DAY_OF_ACTIVITY
+    )
+SELECT 
+	USER_ID,
+	MAX(STREAK_LENGTH) 
+FROM FILTERED
+GROUP BY USER_ID;
+
+select * from user_events;
+select
