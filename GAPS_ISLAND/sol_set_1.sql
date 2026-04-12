@@ -137,5 +137,49 @@ from
         
 	select * from user_events;
     
-	
+	use gapsisland;
+CREATE TABLE service_status (
+    service_name VARCHAR(20),
+    check_time TIMESTAMP,
+    status VARCHAR(10) -- 'Up' or 'Down'
+);
+
+
+
+-- The Scenario:
+-- Apple’s iCloud services are monitored every hour. If a service is 'Down', 
+-- we need to find the start and end time of every consecutive outage period.
+WITH island_groups AS (
+    SELECT
+        service_name,
+        check_time,
+        status,
+        -- We subtract the row_number from the check_time. 
+        -- If check_times are 1 hour apart and row_numbers are 1 unit apart, 
+        -- the result remains CONSTANT for consecutive rows.
+        DATE_SUB(check_time, INTERVAL ROW_NUMBER() OVER(PARTITION BY service_name, status ORDER BY check_time) HOUR) as island_id
+    FROM
+        service_status
+)
+SELECT 
+    service_name,
+    status,
+    MIN(check_time) as outage_start,
+    MAX(check_time) as outage_end,
+    COUNT(*) as hours_down
+FROM 
+    island_groups
+WHERE 
+    status = 'Down'
+GROUP BY 
+    service_name, status, island_id
+ORDER BY 
+    outage_start;
+-- The "Hidden" Difficulty:
+-- If a service is down at 1 PM, 2 PM, and 3 PM, that is one island (outage) lasting 3 hours. 
+-- If it's down at 1 PM and 5 PM, those are two separate islands.
+
+-- Find the start and end time for every "Down" streak.
+
+select * from service_status;
 
