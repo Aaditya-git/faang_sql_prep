@@ -150,3 +150,9 @@ SELECT
 -- After deduplicating by email, return employees whose salary rank is between 2 and 4 within their department, inclusive.
 
 -- After deduplicating by email, find the department with the largest salary spread between its highest-paid and lowest-paid employee, and return that spread.
+
+
+
+
+
+
